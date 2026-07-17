@@ -34,17 +34,32 @@ class _PynputMixin:
             self._kb_ctl = Controller()
         return self._kb_ctl
 
-    def send_hotkey(self, combo):
+    def _parse_combo(self, combo):
         from pynput.keyboard import Key
-        kb = self._kb()
-        parts = [p.strip().lower() for p in combo.split("+") if p.strip()]
         keys = []
-        for p in parts:
+        for p in [p.strip().lower() for p in combo.split("+") if p.strip()]:
             name = self._KEYMAP.get(p, p)
             keys.append(getattr(Key, name) if hasattr(Key, name) else p)
+        return keys
+
+    def send_hotkey(self, combo):
+        keys = self._parse_combo(combo)
+        kb = self._kb()
         for k in keys:
             kb.press(k)
         for k in reversed(keys):
+            kb.release(k)
+
+    def hotkey_down(self, combo):
+        """Press a chord and hold it (for push-to-talk / momentary bindings)."""
+        kb = self._kb()
+        for k in self._parse_combo(combo):
+            kb.press(k)
+
+    def hotkey_up(self, combo):
+        """Release a chord previously pressed with hotkey_down."""
+        kb = self._kb()
+        for k in reversed(self._parse_combo(combo)):
             kb.release(k)
 
     def type_text(self, text):

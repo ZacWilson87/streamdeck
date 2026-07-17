@@ -10,24 +10,31 @@ for Mirabox N3-family stream docks (incl. "henygen" MBOX N3 rebadges):
 - **APP view** — per-app keys from `profiles/*.yaml`. The deck follows OS focus
   automatically (alt-tab to Cursor -> Cursor layout appears).
 - **Back to HOME** — triple-press the big knob (long-press also works).
-- **Voice** — physical button 1 (or a "Dictate" key) toggles universal
-  push-to-talk: records, transcribes (local faster-whisper or OpenAI Whisper),
-  and types the text into whatever input field is focused — any app.
-  For Claude Desktop on macOS, the `Voice (app)` key sends Claude's own
-  dictation shortcut (rebind it in Claude Settings > General from Caps Lock to
-  Ctrl+Opt+Cmd+M, since synthetic Caps Lock is unreliable). Note Claude's
-  shortcut opens Quick Entry (a new-chat popup); use "Dictate here" to speak
-  into the chat you currently have open.
+- **Voice** — two independent paths:
+  - *App-native* (`voice_app`): the deck sends the app's own dictation shortcut
+    (`voice_hotkey` in the profile) so the app's speech model handles it. Claude
+    Desktop on macOS is **Cmd+D**. Higher quality, no local transcription.
+  - *Universal* (`voice_toggle`, and physical button 1): the hub itself records,
+    transcribes (local faster-whisper or OpenAI Whisper), and types the text into
+    whatever field is focused — for apps with no native voice (e.g. a browser).
 
 ## Install
 1. Python 3.10+, then: `pip install -r requirements.txt`
-2. Device SDK: clone https://github.com/MiraboxSpace/StreamDock-Device-SDK and
-   install its Python package (`pip install -e StreamDock-Device-SDK/Python-SDK`,
-   or `uv pip install -e ...`). On macOS also `brew install hidapi`. Note: the
-   separate StreamDock-Plugin-SDK repo is for plugins to Mirabox's own desktop
-   app — not what we want. If your SDK version's API differs, adjust only
-   `hub/device/mirabox.py` — see its notes.
-   (Alternative protocol reference: the open-source `mirajazz` project.)
+   (or `uv sync` — the device SDK below is already wired in as a path source).
+2. Device SDK: clone the vendor SDK **next to this repo** and install it
+   *editable* (the SDK ships its own native transport library beside its Python
+   sources, so a non-editable install on macOS loses the dylib):
+   ```
+   git clone https://github.com/MiraboxSpace/StreamDock-Device-SDK
+   uv sync   # picks up ../StreamDock-Device-SDK/Python-SDK via [tool.uv.sources]
+   ```
+   Plain pip instead of uv: `pip install -e ../StreamDock-Device-SDK/Python-SDK`.
+   The SDK's Python package is named `StreamDock` (import path) / `streamdock`
+   (distribution). No system `hidapi` needed — it's bundled in the transport lib.
+   Note: the separate `StreamDock-Plugin-SDK` repo is for plugins to Mirabox's
+   own desktop app — not what we want. If your SDK version's API differs, adjust
+   only `hub/device/mirabox.py` — see its notes. (Alternative protocol reference:
+   the open-source `mirajazz` project.)
 3. macOS permissions: System Settings > Privacy & Security ->
    Accessibility (for typing/hotkeys) and Microphone for your terminal/Python.
 4. Run: `python run.py`
@@ -64,8 +71,19 @@ keys:
 ```
 Actions: `hotkey <combo>`, `type <text>`, `shell <cmd>`, `launch <app>`,
 `voice_toggle`, `voice_app`, `view HOME`.
-Optional 96x96 PNG icons in `icons/` (named in the profile as `icon: name.png`);
-otherwise a colored initial tile is generated.
+
+### Icons
+Icons live in `icons/` and are committed, so they sync to both machines:
+- **App icons (HOME view):** `icons/app-<name>.png` is picked up automatically
+  for the profile whose `name:` matches (e.g. `app-slack.png`). On macOS you can
+  pull an app's real icon with `sips`:
+  `sips -s format png -z 256 256 "/Applications/Slack.app/Contents/Resources/electron.icns" --out icons/app-slack.png`
+- **Action icons (APP view):** white symbol glyphs at `icons/sym-*.png`. Point a
+  key at one with `icon: sym-search.png`. `voice_toggle`, `voice_app`, and
+  `view HOME` auto-pick a glyph, so they need no `icon:` field. Regenerate/extend
+  the glyph set from Lucide with `tools/gen_symbol_icons.py`.
+- Any `icon:` value is just a filename in `icons/`; missing icons fall back to a
+  colored initial tile (apps) or a text label (actions).
 
 ## Both machines
 Copy this folder (or sync it via git/cloud) to the Mac and the PC. Profiles are

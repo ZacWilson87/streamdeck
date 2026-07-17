@@ -5,14 +5,21 @@ match: Claude
 launch:
   mac: Claude
   win: claude.exe
-# Rebind Claude Desktop's voice shortcut from Caps Lock to this combo
-# (Claude Settings > General > voice shortcut) so the deck can send it reliably.
+# Claude Desktop's built-in dictation shortcut. The deck sends this so Claude's
+# own voice model handles the speech (higher quality, no local transcription).
 voice_hotkey:
-  mac: ctrl+alt+cmd+m
+  mac: cmd+d
   win: ""            # no built-in voice hotkey on Windows yet -> falls back to universal dictation
 keys:
-  - {label: Voice (app), action: voice_app}          # Claude's own Quick Entry dictation (new chat popup on macOS)
-  - {label: Dictate here, action: voice_toggle}      # universal: types into the chat you're in
-  - {label: New chat, action: {mac: hotkey cmd+n, win: hotkey ctrl+n}}
+  - {label: Voice, icon: sym-voice-app.png, action: voice_app}   # Claude's own dictation (Cmd+D on mac)
+  - {label: Dictate here, action: voice_toggle}                  # universal fallback: hub records + types
+  - {label: New chat, icon: sym-new-chat.png, action: {mac: hotkey cmd+shift+o, win: hotkey ctrl+shift+o}}
+  - {label: Select, icon: sym-select.png, action: hotkey enter}   # open the highlighted chat
   - {label: Home, action: view HOME}
-big_knob_rotate: ""   # free for later (e.g. scroll)
+# Left small knob: browse chat history via the search palette (Claude has no
+# dedicated prev/next-conversation shortcut). Press opens search, turn moves the
+# selection; tap the Select key (or the physical Enter button) to open the chat.
+knob1:
+  press: {mac: hotkey cmd+k, win: hotkey ctrl+k}
+  left: hotkey up
+  right: hotkey down

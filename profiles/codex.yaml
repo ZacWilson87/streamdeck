@@ -5,6 +5,10 @@ match: Codex          # adjust to the app's real window/process name on each OS
 launch:
   mac: Codex
   win: codex.exe
+# Codex dictation is push-to-talk: "hold ⌃⇧D". So the Voice key uses a `hold`
+# action — the chord is held while you hold the key and released when you let go
+# (a momentary tap does nothing). Hold the key, speak, release.
 keys:
-  - {label: Dictate, action: voice_toggle}
+  - {label: Voice, icon: sym-voice-app.png, action: {mac: hold ctrl+shift+d, win: voice_toggle}}
+  - {label: Dictate here, action: voice_toggle}                  # universal fallback: hub records + types
   - {label: Home, action: view HOME}
