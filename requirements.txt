@@ -1,0 +1,8 @@
+pyyaml
+pillow
+pynput
+sounddevice
+numpy
+faster-whisper      # or remove and use engine: openai with the openai package
+psutil; platform_system == "Windows"
+mcp>=1.0

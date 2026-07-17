@@ -1,0 +1,20 @@
+name: slack
+label: Slack
+order: 4
+match: Slack
+launch:
+  mac: Slack
+  win: slack.exe
+keys:
+- label: Dictate
+  action: voice_toggle
+- label: Search
+  action:
+    mac: hotkey cmd+k
+    win: hotkey ctrl+k
+- label: Unreads
+  action:
+    mac: hotkey cmd+shift+a
+    win: hotkey ctrl+shift+a
+- label: Home
+  action: view HOME

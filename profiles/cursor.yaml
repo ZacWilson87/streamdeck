@@ -1,0 +1,13 @@
+name: cursor
+label: Cursor
+order: 2
+match: Cursor
+launch:
+  mac: Cursor
+  win: cursor.exe
+keys:
+  - {label: Dictate, action: voice_toggle}
+  - {label: AI pane, action: {mac: hotkey cmd+l, win: hotkey ctrl+l}}
+  - {label: Accept, action: {mac: hotkey cmd+enter, win: hotkey ctrl+enter}}
+  - {label: Reject, action: {mac: hotkey cmd+backspace, win: hotkey ctrl+backspace}}
+  - {label: Home, action: view HOME}

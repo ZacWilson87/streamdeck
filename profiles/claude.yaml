@@ -1,0 +1,18 @@
+name: claude
+label: Claude
+order: 1
+match: Claude
+launch:
+  mac: Claude
+  win: claude.exe
+# Rebind Claude Desktop's voice shortcut from Caps Lock to this combo
+# (Claude Settings > General > voice shortcut) so the deck can send it reliably.
+voice_hotkey:
+  mac: ctrl+alt+cmd+m
+  win: ""            # no built-in voice hotkey on Windows yet -> falls back to universal dictation
+keys:
+  - {label: Voice (app), action: voice_app}          # Claude's own Quick Entry dictation (new chat popup on macOS)
+  - {label: Dictate here, action: voice_toggle}      # universal: types into the chat you're in
+  - {label: New chat, action: {mac: hotkey cmd+n, win: hotkey ctrl+n}}
+  - {label: Home, action: view HOME}
+big_knob_rotate: ""   # free for later (e.g. scroll)

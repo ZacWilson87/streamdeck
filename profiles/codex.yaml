@@ -1,0 +1,10 @@
+name: codex
+label: Codex
+order: 3
+match: Codex          # adjust to the app's real window/process name on each OS
+launch:
+  mac: Codex
+  win: codex.exe
+keys:
+  - {label: Dictate, action: voice_toggle}
+  - {label: Home, action: view HOME}

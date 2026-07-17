@@ -1,0 +1,5 @@
+device:
+  kind: auto          # auto | mirabox | simulator
+voice:
+  engine: local       # local (faster-whisper) | openai (Whisper API, needs OPENAI_API_KEY)
+  local_model: base.en

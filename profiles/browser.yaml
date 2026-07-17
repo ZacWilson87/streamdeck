@@ -1,0 +1,12 @@
+name: browser
+label: Browser
+order: 5
+match: Chrome         # or Safari / Edge / Firefox
+launch:
+  mac: Google Chrome
+  win: chrome.exe
+keys:
+  - {label: New tab, action: {mac: hotkey cmd+t, win: hotkey ctrl+t}}
+  - {label: Reopen tab, action: {mac: hotkey cmd+shift+t, win: hotkey ctrl+shift+t}}
+  - {label: Dictate, action: voice_toggle}
+  - {label: Home, action: view HOME}
