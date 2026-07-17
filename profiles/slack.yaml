@@ -9,10 +9,12 @@ keys:
 - label: Dictate
   action: voice_toggle
 - label: Search
+  icon: sym-search.png
   action:
     mac: hotkey cmd+k
     win: hotkey ctrl+k
 - label: Unreads
+  icon: sym-unreads.png
   action:
     mac: hotkey cmd+shift+a
     win: hotkey ctrl+shift+a

@@ -1,21 +1,28 @@
-"""Adapter for Mirabox Stream Dock N3-family (your 'henygen' MBOX N3 rebadge).
+"""Adapter for Mirabox Stream Dock N3-family (the 'henygen' MBOX N3 rebadge).
 
-Uses Mirabox's official Python SDK:
-    git clone https://github.com/MiraBoxSpace/StreamDock-SDKs
-    (Python SDK lives under the python/ directory; see its README)
+Uses Mirabox's official Python SDK (package name ``streamdock``):
+    git clone https://github.com/MiraboxSpace/StreamDock-Device-SDK
+    pip install -e StreamDock-Device-SDK/Python-SDK
+The SDK ships its own native transport (libtransport_*.dylib/.so/.dll), so no
+system hidapi install is needed. It must be installed *editable* on macOS so
+the bundled dylib next to the Python sources stays reachable.
 
-NOTE: Mirabox's SDK API surface has changed between releases and is only
-partially documented, so this adapter is written against the common shape
-(DeviceManager.enumerate() -> devices with .open(), .set_key_image(),
-.set_key_callback(), .whell_* callbacks). If your SDK version differs,
-this file is the ONLY place you need to touch — everything above the
-device layer is SDK-agnostic. Alternative: the reverse-engineered
-'mirajazz' library (Rust) documents the raw HID protocol if you ever
-want zero vendor code.
+This file is the ONLY place that touches the vendor SDK; everything above the
+device layer is SDK-agnostic. It is written against the current SDK shape:
 
-Key size: N3 keys are 64x64 or 96x96 px depending on revision; we render
-96x96 and downscale here if the SDK reports a smaller size.
+  DeviceManager().enumerate() -> [StreamDock...]      # device objects
+  dev.open(); dev.init()                              # open + read thread starts
+  dev.set_key_callback(cb)  where cb(device, InputEvent)
+  dev.set_key_image(logical_key 1..N, path)           # path to an image file
+  dev.refresh()                                       # flush framebuffer to screen
+  dev.close()
+
+The N3 exposes 18 logical inputs: 6 LCD keys (KEY_1..KEY_6), 3 physical buttons
+(KEY_7..KEY_9), and 3 knobs (KNOB_1 bottom-left, KNOB_2 bottom-right, KNOB_3
+top) that each rotate (LEFT/RIGHT) and press. See StreamDockN3.decode_input_event.
 """
+import os
+import tempfile
 import threading
 
 from . import BaseDevice
@@ -28,46 +35,75 @@ class MiraboxDevice(BaseDevice):
         if not devices:
             raise RuntimeError("no Mirabox device found")
         self.dev = devices[0]
-        self.key_size = 96
+        self._refresh_timer = None
+        self._refresh_lock = threading.Lock()
+        self._tmpdir = tempfile.mkdtemp(prefix="streamdock-keys-")
+
+        # SDK logical-key -> hub event mapping.
+        from StreamDock.InputTypes import ButtonKey, KnobId, Direction
+        self._ButtonKey = ButtonKey
+        self._Direction = Direction
+        # LCD keys KEY_1..KEY_6 -> hub key index 0..5
+        self._lcd_keys = {getattr(ButtonKey, f"KEY_{i + 1}"): i for i in range(6)}
+        # Physical buttons KEY_7..KEY_9 -> hub button index 0..2
+        self._buttons = {getattr(ButtonKey, f"KEY_{i + 7}"): i for i in range(3)}
+        # Knobs -> hub knob index. Confirmed on the N3 via tools/knob_probe.py:
+        #   KNOB_3 = big knob        -> index 0 (HOME gesture / paging, big_knob_*)
+        #   KNOB_1 = left small knob -> index 1 (knob1)
+        #   KNOB_2 = right small knob-> index 2 (knob2)
+        self._knobs = {KnobId.KNOB_3: 0, KnobId.KNOB_1: 1, KnobId.KNOB_2: 2}
 
     def start(self):
         self.dev.open()
-        self.dev.set_key_callback(self._on_key)
-        # Knobs/buttons arrive via the SDK's dial/whell callbacks on N3.
-        for name in ("set_dial_callback", "set_whell_callback"):
-            if hasattr(self.dev, name):
-                getattr(self.dev, name)(self._on_dial)
-        threading.Thread(target=getattr(self.dev, "listen", lambda: None),
-                         daemon=True).start()
+        self.dev.init()            # wake screen, full brightness, clear icons
+        self.dev.set_key_callback(self._on_event)
 
-    def _on_key(self, _dev, index, pressed):
-        # SDK indexes keys 1..6 on some firmwares; normalize to 0..5
-        i = index - 1 if index >= 1 else index
-        if 0 <= i <= 5:
-            self._cb(("key", i, bool(pressed)))
-        elif 6 <= i <= 8:  # some revisions report physical buttons as keys 7-9
-            self._cb(("button", i - 6, bool(pressed)))
+    # ---------- input ----------
+    def _on_event(self, _device, event):
+        from StreamDock.InputTypes import EventType
+        et = event.event_type
+        if et == EventType.BUTTON:
+            if event.key in self._lcd_keys:
+                self._cb(("key", self._lcd_keys[event.key], event.state == 1))
+            elif event.key in self._buttons:
+                self._cb(("button", self._buttons[event.key], event.state == 1))
+        elif et == EventType.KNOB_ROTATE:
+            idx = self._knobs.get(event.knob_id)
+            if idx is not None:
+                delta = 1 if event.direction == self._Direction.RIGHT else -1
+                self._cb(("knob_rotate", idx, delta))
+        elif et == EventType.KNOB_PRESS:
+            idx = self._knobs.get(event.knob_id)
+            if idx is not None:
+                self._cb(("knob_press", idx, event.state == 1))
 
-    def _on_dial(self, _dev, dial_index, event, value=None):
-        # event conventions vary: 'rotate' with +/- value, or 'press'/'release'
-        if event in ("rotate", "turn"):
-            self._cb(("knob_rotate", dial_index, int(value or 0)))
-        elif event in ("press", "down"):
-            self._cb(("knob_press", dial_index, True))
-        elif event in ("release", "up"):
-            self._cb(("knob_press", dial_index, False))
-
+    # ---------- output ----------
     def set_key_image(self, index, pil_image):
-        img = pil_image.resize((self.key_size, self.key_size))
-        # Most SDK versions accept a file path or raw JPEG bytes:
-        import io
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=90)
-        if hasattr(self.dev, "set_key_image_data"):
-            self.dev.set_key_image_data(index + 1, buf.getvalue())
-        else:
-            import tempfile, os
-            f = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
-            f.write(buf.getvalue()); f.close()
-            self.dev.set_key_image(index + 1, f.name)
-            os.unlink(f.name)
+        # SDK takes a file path and a logical key number (1-based); it handles
+        # rotation/resize/format for the N3 internally.
+        path = os.path.join(self._tmpdir, f"key{index}.png")
+        pil_image.save(path)
+        self.dev.set_key_image(index + 1, path)
+        self._schedule_refresh()
+
+    def _schedule_refresh(self):
+        # Coalesce the per-key writes of one redraw into a single screen flush.
+        with self._refresh_lock:
+            if self._refresh_timer is not None:
+                self._refresh_timer.cancel()
+            self._refresh_timer = threading.Timer(0.05, self._do_refresh)
+            self._refresh_timer.daemon = True
+            self._refresh_timer.start()
+
+    def _do_refresh(self):
+        try:
+            self.dev.refresh()
+        except Exception as e:
+            print(f"device: refresh failed: {e}")
+
+    def close(self):
+        try:
+            self.dev.set_key_callback(None)
+            self.dev.close()
+        except Exception:
+            pass

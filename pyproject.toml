@@ -12,7 +12,15 @@ dependencies = [
     "faster-whisper",
     "psutil; platform_system == 'Windows'",
     "mcp>=1.0",
+    # Mirabox device SDK. Cloned next to this repo:
+    #   git clone https://github.com/MiraboxSpace/StreamDock-Device-SDK
+    # Installed editable so the SDK's bundled native transport dylib/.so
+    # (which lives beside its Python sources) stays reachable.
+    "streamdock",
 ]
 
 [tool.uv]
 package = false
+
+[tool.uv.sources]
+streamdock = { path = "../StreamDock-Device-SDK/Python-SDK", editable = true }

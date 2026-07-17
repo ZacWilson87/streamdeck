@@ -33,6 +33,13 @@ def load_profiles():
         for key in data.get("keys", []):
             if "action" in key:
                 key["action"] = _resolve_os(key["action"])
+        # knob bindings: {left|right|press: <action>}, each possibly per-OS
+        for knob in ("big_knob", "knob1", "knob2"):
+            cfg = data.get(knob)
+            if isinstance(cfg, dict):
+                for slot in ("left", "right", "press"):
+                    if slot in cfg:
+                        cfg[slot] = _resolve_os(cfg[slot])
         data["order"] = data.get("order", 100)
         profiles[data["name"]] = data
     # stable ordering by 'order' then name
