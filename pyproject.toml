@@ -1,0 +1,18 @@
+[project]
+name = "streamdock-hub"
+version = "0.1.0"
+description = "App switcher and contextual control surface for Mirabox N3-family stream docks"
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml",
+    "pillow",
+    "pynput",
+    "sounddevice",
+    "numpy",
+    "faster-whisper",
+    "psutil; platform_system == 'Windows'",
+    "mcp>=1.0",
+]
+
+[tool.uv]
+package = false
