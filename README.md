@@ -21,9 +21,12 @@ for Mirabox N3-family stream docks (incl. "henygen" MBOX N3 rebadges):
 
 ## Install
 1. Python 3.10+, then: `pip install -r requirements.txt`
-2. Device SDK: clone https://github.com/MiraBoxSpace/StreamDock-SDKs and make
-   its Python package importable (`pip install -e path/to/python`). If your SDK
-   version's API differs, adjust only `hub/device/mirabox.py` — see its notes.
+2. Device SDK: clone https://github.com/MiraboxSpace/StreamDock-Device-SDK and
+   install its Python package (`pip install -e StreamDock-Device-SDK/Python-SDK`,
+   or `uv pip install -e ...`). On macOS also `brew install hidapi`. Note: the
+   separate StreamDock-Plugin-SDK repo is for plugins to Mirabox's own desktop
+   app — not what we want. If your SDK version's API differs, adjust only
+   `hub/device/mirabox.py` — see its notes.
    (Alternative protocol reference: the open-source `mirajazz` project.)
 3. macOS permissions: System Settings > Privacy & Security ->
    Accessibility (for typing/hotkeys) and Microphone for your terminal/Python.
